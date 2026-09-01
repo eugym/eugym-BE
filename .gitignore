@@ -1,0 +1,68 @@
+# ── Secrets ───────────────────────────────────────────────────────────────────
+# .env holds live JWT signing secrets, the database password, and Paystack,
+# SendGrid and Cloudinary keys. It must never be committed.
+# .env.example IS committed — it is the template, with every value blank.
+.env
+.env.*
+!.env.example
+
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+
+# ── Build output ──────────────────────────────────────────────────────────────
+# tsconfig.json sets "outDir": "./dist"
+dist/
+build/
+*.tsbuildinfo
+
+# ── Runtime logs ──────────────────────────────────────────────────────────────
+# src/config/logger.ts writes logs/error.log and logs/combined.log when
+# NODE_ENV=production.
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Uploads ───────────────────────────────────────────────────────────────────
+# multer's disk destination, if one is configured. Kept out so user-submitted
+# files never land in the repository.
+uploads/
+tmp/
+temp/
+
+# ── Tests & coverage ──────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── TLS / certificates ────────────────────────────────────────────────────────
+# docker-compose mounts certbot volumes for nginx; never commit key material.
+*.pem
+*.key
+*.crt
+certbot/
+
+# ── Local database dumps ──────────────────────────────────────────────────────
+*.sql.gz
+*.dump
+pgdata/
+
+# ── Editors ───────────────────────────────────────────────────────────────────
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Caches ────────────────────────────────────────────────────────────────────
+.cache/
+.eslintcache

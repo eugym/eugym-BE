@@ -1,0 +1,25 @@
+# Normalise every text file to LF in the repository and on checkout.
+#
+# core.autocrlf is true on the Windows dev machines, which would otherwise
+# rewrite these files to CRLF. The API runs in a Linux container: CRLF breaks
+# shebangs, nginx directives and shell scripts, and it makes every subsequent
+# diff look like the whole file changed.
+* text=auto eol=lf
+
+# Files that must stay LF whatever the global config says.
+Dockerfile        text eol=lf
+*.sh              text eol=lf
+docker/**/*.conf  text eol=lf
+
+# Binary — never convert, never diff as text.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+
+# Generated: collapsed by default in GitHub reviews.
+package-lock.json linguist-generated=true
