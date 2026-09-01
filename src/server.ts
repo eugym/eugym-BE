@@ -38,11 +38,52 @@ app.use(helmet({
 }))
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+/**
+ * Allowed browser origins.
+ *
+ * Comma-separated. An entry may contain `*` as a wildcard for one or more
+ * characters within a hostname, which is what makes Vercel usable: every
+ * preview deployment gets its own URL (eugym-git-<branch>-<team>.vercel.app),
+ * so they cannot be listed individually.
+ *
+ *   ALLOWED_ORIGINS=https://eugym.vercel.app,https://*.vercel.app,http://localhost:3000
+ */
+const originMatchers = env.ALLOWED_ORIGINS.split(',')
+  .map((o) => o.trim())
+  .filter(Boolean)
+  .map((pattern) => {
+    if (!pattern.includes('*')) return (origin: string) => origin === pattern
+
+    // Escape everything except `*`, which becomes "any run of non-dot, non-slash
+    // characters" — so https://*.vercel.app matches one label, not a.b.vercel.app
+    // and not an attacker's evil-vercel.app.co.
+    const source =
+      '^' +
+      pattern
+        .split('*')
+        .map((part) => part.replace(/[.*+?^${}()|[\]]/g, '\\$&'))
+        .join('[^./]+') +
+      '$'
+    const re = new RegExp(source)
+    return (origin: string) => re.test(origin)
+  })
+
+function isAllowedOrigin(origin: string): boolean {
+  return originMatchers.some((match) => match(origin))
+}
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
-    cb(new Error(`CORS: ${origin} not allowed`))
+    // No Origin header: same-origin, curl, health checks, server-to-server.
+    if (!origin) return cb(null, true)
+    if (isAllowedOrigin(origin)) return cb(null, true)
+
+    // Deny by omitting the CORS headers rather than raising. Passing an Error
+    // here reached the global handler and answered 500, which reads as a broken
+    // server instead of a refused origin. The browser still blocks the request
+    // — that is what absent Access-Control-Allow-Origin means.
+    logger.warn('CORS: origin not allowed', { origin })
+    return cb(null, false)
   },
   credentials: true,
   methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
