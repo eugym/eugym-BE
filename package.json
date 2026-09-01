@@ -10,7 +10,9 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:reset": "tsx src/db/reset.ts",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "db:migrate:prod": "node dist/db/migrate.js",
+    "db:seed:prod": "node dist/db/seed.js"
   },
   "dependencies": {
     "express": "^4.19.2",
@@ -54,5 +56,8 @@
     "eslint": "^8.57.0",
     "@typescript-eslint/parser": "^7.13.0",
     "@typescript-eslint/eslint-plugin": "^7.13.0"
+  },
+  "engines": {
+    "node": ">=20 <23"
   }
 }

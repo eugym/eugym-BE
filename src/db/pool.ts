@@ -2,17 +2,31 @@ import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg
 import { env } from '../config/env'
 import { logger } from '../config/logger'
 
+// Managed Postgres (Supabase, Neon, Render) terminates TLS with a certificate
+// chain Node does not ship a root for, so verification is disabled while the
+// connection itself stays encrypted.
+const ssl = env.DB_SSL ? { rejectUnauthorized: false } : false
+
+// A single URI wins over the discrete DB_* fields when provided.
+const connection = env.DATABASE_URL
+  ? { connectionString: env.DATABASE_URL }
+  : {
+      host:     env.DB_HOST,
+      port:     env.DB_PORT,
+      database: env.DB_NAME,
+      user:     env.DB_USER,
+      password: env.DB_PASSWORD,
+    }
+
 export const pool = new Pool({
-  host:     env.DB_HOST,
-  port:     env.DB_PORT,
-  database: env.DB_NAME,
-  user:     env.DB_USER,
-  password: env.DB_PASSWORD,
-  ssl:      env.DB_SSL ? { rejectUnauthorized: false } : false,
-  min:      env.DB_POOL_MIN,
-  max:      env.DB_POOL_MAX,
-  idleTimeoutMillis:    30_000,
-  connectionTimeoutMillis: 5_000,
+  ...connection,
+  ssl,
+  min: env.DB_POOL_MIN,
+  max: env.DB_POOL_MAX,
+  idleTimeoutMillis: 30_000,
+  // Managed providers sit behind a pooler and a cold one can take a few
+  // seconds to answer; 5s produced spurious boot failures on first deploy.
+  connectionTimeoutMillis: 15_000,
 })
 
 pool.on('error', (err) => {

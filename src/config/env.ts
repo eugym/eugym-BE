@@ -17,11 +17,21 @@ const envSchema = z.object({
   API_PREFIX: z.string().default('/api/v1'),
 
   // Database
+  //
+  // Managed providers (Supabase, Render, Neon, Railway) hand out a single
+  // connection URI, not five discrete values. When DATABASE_URL is set it wins
+  // and the DB_* fields below are ignored — decomposing a URI by hand is where
+  // these deployments usually break, because the pooler username contains a dot
+  // (postgres.<project-ref>) and passwords often need percent-encoding.
+  DATABASE_URL: z.string().url().optional(),
+
+  // Optional because DATABASE_URL can supply all of them. The refinement
+  // below enforces that one form or the other is complete.
   DB_HOST:     z.string().default('localhost'),
   DB_PORT:     z.coerce.number().default(5432),
-  DB_NAME:     z.string(),
-  DB_USER:     z.string(),
-  DB_PASSWORD: z.string(),
+  DB_NAME:     z.string().optional(),
+  DB_USER:     z.string().optional(),
+  DB_PASSWORD: z.string().optional(),
   DB_SSL:      boolFromString.default(false),
   DB_POOL_MIN: z.coerce.number().default(2),
   DB_POOL_MAX: z.coerce.number().default(10),
@@ -72,6 +82,17 @@ const envSchema = z.object({
   // Logs
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('debug'),
 })
+  // Either a full connection URI, or all three discrete credentials. Failing
+  // here at boot with a clear message beats a running server that cannot reach
+  // its database.
+  .refine(
+    (e) => Boolean(e.DATABASE_URL) || Boolean(e.DB_NAME && e.DB_USER && e.DB_PASSWORD),
+    {
+      path: ['DATABASE_URL'],
+      message:
+        'Set DATABASE_URL, or all of DB_NAME, DB_USER and DB_PASSWORD',
+    },
+  )
 
 function parseEnv() {
   const result = envSchema.safeParse(process.env)
