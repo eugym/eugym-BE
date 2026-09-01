@@ -5,7 +5,7 @@ import helmet from 'helmet'
 import compression from 'compression'
 import morgan from 'morgan'
 
-import { env, isDev } from './config/env'
+import { env, isDev, paystackConfigured, emailConfigured } from './config/env'
 import { logger } from './config/logger'
 import { connectDB } from './db/pool'
 import { errorHandler, globalLimiter, requestLogger } from './middleware'
@@ -108,6 +108,11 @@ app.use(errorHandler)
 async function bootstrap() {
   try {
     await connectDB()
+
+    // Surfaced at boot so a half-configured deployment is obvious in the log
+    // rather than discovered when a user hits checkout.
+    if (!paystackConfigured) logger.warn('⚠  Paystack not configured — payment routes will return 400')
+    if (!emailConfigured) logger.warn('⚠  SMTP not configured — outgoing email is skipped')
     startAllJobs()
 
     const server = app.listen(env.PORT, () => {

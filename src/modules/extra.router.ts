@@ -6,7 +6,7 @@ import { authenticate, authorize, validate } from '../middleware'
 import { ok, created } from '../utils'
 import type { UserRow, ProductRow } from '../types'
 import bcrypt from 'bcryptjs'
-import { env } from '../config/env'
+import { env, paystackConfigured } from '../config/env'
 import { emailService } from '../lib/email'
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -479,6 +479,12 @@ ordersRouter.post('/', async (req: Request, res: Response) => {
     }
 
     // Paystack init
+    if (!paystackConfigured) {
+      throw AppError.badRequest(
+        'Payments are not available yet. Please contact support to complete this order.',
+      )
+    }
+
     const axios = (await import('axios')).default
     const { data } = await axios.post(
       'https://api.paystack.co/transaction/initialize',

@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { env } from '../config/env'
+import { env, emailConfigured } from '../config/env'
 import { logger } from '../config/logger'
 
 const transporter = nodemailer.createTransport({
@@ -54,6 +54,14 @@ const base = (content: string) => `
 </html>`
 
 async function send(to: string, subject: string, html: string): Promise<void> {
+  // No credentials: skip the send entirely. Attempting it opens a socket to
+  // smtp.sendgrid.net with a placeholder key on every signup, waits for the
+  // rejection, and logs an error for something nobody configured yet.
+  if (!emailConfigured) {
+    logger.warn('Email skipped — SMTP is not configured', { to, subject })
+    return
+  }
+
   try {
     await transporter.sendMail({
       from:    `"${env.EMAIL_FROM_NAME}" <${env.EMAIL_FROM}>`,

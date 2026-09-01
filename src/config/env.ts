@@ -54,15 +54,20 @@ const envSchema = z.object({
   AUTH_RATE_LIMIT: z.coerce.number().default(10),
 
   // Paystack
-  PAYSTACK_SECRET_KEY:    z.string(),
-  PAYSTACK_PUBLIC_KEY:    z.string(),
-  PAYSTACK_WEBHOOK_SECRET: z.string(),
+  // Optional: the API boots without payment credentials and refuses only the
+  // routes that actually need them. Requiring them meant a deployment with no
+  // Paystack account yet could not start at all.
+  PAYSTACK_SECRET_KEY:    z.string().default(''),
+  PAYSTACK_PUBLIC_KEY:    z.string().default(''),
+  PAYSTACK_WEBHOOK_SECRET: z.string().default(''),
 
   // Email
   SMTP_HOST:      z.string().default('smtp.sendgrid.net'),
   SMTP_PORT:      z.coerce.number().default(587),
-  SMTP_USER:      z.string(),
-  SMTP_PASS:      z.string(),
+  // Optional for the same reason. Without them, mail is skipped and logged
+  // rather than attempted against a host that will reject it.
+  SMTP_USER:      z.string().default(''),
+  SMTP_PASS:      z.string().default(''),
   EMAIL_FROM:     z.string().email().default('noreply@eugym.ng'),
   EMAIL_FROM_NAME: z.string().default('Eugym Fitness'),
 
@@ -110,3 +115,21 @@ export const env = parseEnv()
 export const isDev  = env.NODE_ENV === 'development'
 export const isProd = env.NODE_ENV === 'production'
 export const isTest = env.NODE_ENV === 'test'
+
+/**
+ * A value that is blank, or still carries the shape of the .env.example
+ * placeholder, counts as absent. Treating 'sk_test_xxxxxxxx' as a real key is
+ * how you end up debugging a 401 from Paystack instead of reading one line of
+ * config.
+ */
+function configured(value: string): boolean {
+  if (!value.trim()) return false
+  return !/x{4,}|your_|changeme/i.test(value)
+}
+
+/** Payments can be taken. When false, payment routes return 503. */
+export const paystackConfigured = configured(env.PAYSTACK_SECRET_KEY)
+
+/** Mail can be delivered. When false, sends are skipped, not attempted. */
+export const emailConfigured =
+  configured(env.SMTP_USER) && configured(env.SMTP_PASS)

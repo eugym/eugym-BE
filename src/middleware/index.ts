@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import rateLimit from 'express-rate-limit'
 import { ZodSchema } from 'zod'
-import { env } from '../config/env'
+import { env, paystackConfigured } from '../config/env'
 import { logger } from '../config/logger'
 import { AppError } from '../utils'
 import type { JwtPayload, UserRole } from '../types'
@@ -158,6 +158,10 @@ export const passwordResetLimiter = rateLimit({
 // ─── Paystack webhook signature verifier ──────────────────────────────────────
 import crypto from 'crypto'
 export function verifyPaystackWebhook(req: Request, _res: Response, next: NextFunction): void {
+  if (!paystackConfigured) {
+    throw AppError.badRequest('Payments are not configured on this deployment')
+  }
+
   const signature = req.headers['x-paystack-signature'] as string
   if (!signature) throw AppError.unauthorized('Missing webhook signature')
 

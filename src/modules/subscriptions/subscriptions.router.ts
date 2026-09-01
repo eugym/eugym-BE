@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import axios from 'axios'
 import { z } from 'zod'
 import { query, withTransaction } from '../../db/pool'
-import { env } from '../../config/env'
+import { env, paystackConfigured } from '../../config/env'
 import { AppError, mapSubscription, SUBSCRIPTION_PRICES, DURATION_DAYS, calculateProRata } from '../../utils'
 import { authenticate, authorize, validate, verifyPaystackWebhook } from '../../middleware'
 import { ok } from '../../utils'
@@ -30,6 +30,14 @@ async function initializePaystack(
   amountKobo: number,
   metadata: Record<string, unknown>,
 ): Promise<{ reference: string; authorizationUrl: string }> {
+  // Without a key, Paystack answers 401 and the caller sees an opaque 500.
+  // Say what is actually wrong instead.
+  if (!paystackConfigured) {
+    throw AppError.badRequest(
+      'Payments are not available yet. Please contact support to complete this purchase.',
+    )
+  }
+
   const { data } = await axios.post(
     'https://api.paystack.co/transaction/initialize',
     {
